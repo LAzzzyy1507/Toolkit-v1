@@ -1,0 +1,7 @@
+{
+  "name": "CyberToolkit",
+  "description": "Portfolio-grade cybersecurity learning app and defensive diagnostic suite featuring IP intelligence, SSL/header inspector, subdomain finder, CVE lookup, packet analyzer, port scanner, and AI security learning modules.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
