@@ -3,7 +3,7 @@
  * @license Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Globe,
   Lock,
@@ -25,6 +25,7 @@ import {
 import { Navbar } from './components/Navbar.tsx';
 import { AboutModal } from './components/AboutModal.tsx';
 import { Explainer } from './components/Explainer.tsx';
+import { CommandPalette } from './components/CommandPalette.tsx';
 
 // 8 Primary Tools
 import { IpDomainIntel } from './components/tools/IpDomainIntel.tsx';
@@ -46,6 +47,29 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('tools');
   const [activeToolId, setActiveToolId] = useState<string>('ip-domain');
   const [isAboutOpen, setIsAboutOpen] = useState<boolean>(false);
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+
+  // Global keyboard shortcut: Cmd + K (Mac) or Ctrl + K (Windows/Linux)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  const handleNavigateTool = (toolId: string) => {
+    setActiveTab('tools');
+    setActiveToolId(toolId);
+  };
+
+  const handleNavigateTab = (tabId: string) => {
+    setActiveTab(tabId);
+  };
 
   const tools = [
     {
@@ -105,6 +129,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenAbout={() => setIsAboutOpen(true)}
+        onOpenSearch={() => setIsSearchOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -250,6 +275,15 @@ export default function App() {
 
       {/* About Project Modal */}
       <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+
+      {/* Global Cmd/Ctrl + K Command Palette Search Overlay */}
+      <CommandPalette
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onNavigateTool={handleNavigateTool}
+        onNavigateTab={handleNavigateTab}
+        onOpenAbout={() => setIsAboutOpen(true)}
+      />
     </div>
   );
 }
