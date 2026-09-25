@@ -1,12 +1,45 @@
 import React, { useState } from 'react';
 import { ShieldCheck, ShieldAlert, Lock, AlertTriangle, CheckCircle2, XCircle, Search, Loader2 } from 'lucide-react';
 import { Explainer } from '../Explainer.tsx';
+import { CopyButton } from '../CopyButton.tsx';
 
 export const CertHeaderInspector: React.FC = () => {
   const [target, setTarget] = useState('github.com');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
+
+  const formatReport = () => {
+    if (!data) return '';
+    const h = data.securityHeaders;
+    const cert = data.certificate;
+    return [
+      `# TLS & Security Header Audit: ${data.target}`,
+      `Security Grade: ${h?.grade || 'N/A'} (Score: ${h?.score ?? 0}/100)`,
+      `HTTP Status: ${h?.statusCode || 'N/A'}`,
+      '',
+      '--- SSL/TLS Certificate ---',
+      `Issuer: ${cert?.issuer?.O || cert?.issuer?.CN || 'Unknown'}`,
+      `Protocol: ${cert?.protocol || 'Unknown'}`,
+      `Cipher: ${cert?.cipherName || 'Unknown'}`,
+      `Validity Remaining: ${cert?.daysRemaining ?? 'N/A'} days`,
+      `Valid From: ${cert?.validFrom || 'N/A'}`,
+      `Valid To: ${cert?.validTo || 'N/A'}`,
+      '',
+      '--- Security Headers Status ---',
+      `Content-Security-Policy: ${h?.headers?.csp ? 'Present' : 'MISSING'}`,
+      `Strict-Transport-Security: ${h?.headers?.hsts ? 'Present' : 'MISSING'}`,
+      `X-Frame-Options: ${h?.headers?.xfo ? 'Present' : 'MISSING'}`,
+      `X-Content-Type-Options: ${h?.headers?.xcto ? 'Present' : 'MISSING'}`,
+      `Referrer-Policy: ${h?.headers?.rp || 'MISSING'}`,
+      '',
+      '--- Key Issues ---',
+      ...((h?.issues || []).map((iss: string) => `- ${iss}`)),
+      '',
+      '--- Passed Checks ---',
+      ...((h?.passes || []).map((p: string) => `+ ${p}`)),
+    ].join('\n');
+  };
 
   const handleInspect = async (inspectTarget?: string) => {
     const host = inspectTarget || target;
@@ -108,6 +141,17 @@ export const CertHeaderInspector: React.FC = () => {
 
       {data && (
         <div className="space-y-6">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-xs uppercase tracking-wider font-semibold text-slate-400 font-mono">
+              Audit Findings & Telemetry
+            </span>
+            <CopyButton
+              text={formatReport}
+              label="Copy Audit Report"
+              copiedLabel="Report Copied!"
+            />
+          </div>
+
           {/* Top Grade & Overview Card */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Grade Card */}

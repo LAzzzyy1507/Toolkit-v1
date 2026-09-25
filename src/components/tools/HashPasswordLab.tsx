@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { KeyRound, Hash, ShieldCheck, AlertTriangle, Eye, EyeOff, Check, X, ShieldAlert, Cpu } from 'lucide-react';
 import { Explainer } from '../Explainer.tsx';
+import { CopyButton } from '../CopyButton.tsx';
 
 // Hash detection signatures
 interface HashMatch {
@@ -288,10 +289,26 @@ export const HashPasswordLab: React.FC = () => {
 
           {/* Password Input */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
-              <span>Test Password String:</span>
-              <span className="text-slate-400 font-mono text-[11px]">{entropyAnalysis.length} characters</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-300">
+                Test Password String: <span className="text-slate-400 font-mono text-[11px]">({entropyAnalysis.length} characters)</span>
+              </label>
+              <CopyButton
+                text={() => [
+                  '# Password Entropy & Brute-Force Analysis',
+                  `Password Length: ${entropyAnalysis.length} characters`,
+                  `Shannon Entropy: ${entropyAnalysis.entropy} bits`,
+                  `Strength Rating: ${entropyAnalysis.rating}`,
+                  `Character Pool Size: ${entropyAnalysis.poolSize} characters`,
+                  `Offline GPU Rig Crack Time (100 GH/s): ${entropyAnalysis.gpuRigCrackTime}`,
+                  `Online Throttled Guess Time (10/s): ${entropyAnalysis.onlineCrackTime}`,
+                  `Character Sets: Lowercase=${entropyAnalysis.hasLower}, Uppercase=${entropyAnalysis.hasUpper}, Digits=${entropyAnalysis.hasDigits}, Symbols=${entropyAnalysis.hasSymbols}`,
+                  'Note: Computed 100% locally via client-side Shannon entropy math without network transmission.'
+                ].join('\n')}
+                label="Copy Entropy Report"
+                copiedLabel="Entropy Copied!"
+              />
+            </div>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -492,9 +509,30 @@ export const HashPasswordLab: React.FC = () => {
 
           {/* Results */}
           <div className="space-y-4">
-            <h3 className="text-xs uppercase tracking-wider font-semibold text-slate-200 font-mono">
-              Candidate Algorithm Matches ({identifiedHashes.length})
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs uppercase tracking-wider font-semibold text-slate-200 font-mono">
+                Candidate Algorithm Matches ({identifiedHashes.length})
+              </h3>
+              {identifiedHashes.length > 0 && (
+                <CopyButton
+                  text={() => [
+                    `# Hash Format Identification Report`,
+                    `Target Hash String: ${hashInput.trim()}`,
+                    `Length: ${hashInput.trim().length} characters`,
+                    '',
+                    ...identifiedHashes.map(m => [
+                      `Algorithm: ${m.name} (${m.bitLength}-bit)`,
+                      `Category: ${m.category}`,
+                      `Security Status: ${m.status}`,
+                      `Description: ${m.description}`,
+                      '----------------------------------------'
+                    ].join('\n'))
+                  ].join('\n')}
+                  label="Copy Matches"
+                  copiedLabel="Matches Copied!"
+                />
+              )}
+            </div>
 
             {identifiedHashes.length > 0 ? (
               <div className="grid grid-cols-1 gap-3">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, FileCode, AlertTriangle, ShieldAlert, CheckCircle2, Loader2, ArrowRightLeft, Radio, KeyRound } from 'lucide-react';
 import { Explainer } from '../Explainer.tsx';
+import { CopyButton } from '../CopyButton.tsx';
 
 export const PacketAnalyzer: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -8,6 +9,33 @@ export const PacketAnalyzer: React.FC = () => {
   const [analysis, setAnalysis] = useState<any>(null);
   const [selectedPacket, setSelectedPacket] = useState<any | null>(null);
   const [activeView, setActiveView] = useState<'packets' | 'findings' | 'conversations'>('findings');
+
+  const formatPcapReport = () => {
+    if (!analysis) return '';
+    return [
+      `# Packet Capture Analysis Report: ${analysis.filename}`,
+      `Format: ${analysis.format} | Total Packets: ${analysis.totalPackets} | Volume: ${(analysis.totalBytes / 1024).toFixed(1)} KB`,
+      `Capture Duration: ${analysis.durationSeconds}s`,
+      `Protocols Observed: ${Object.entries(analysis.protocols || {}).map(([p, c]) => `${p}: ${c}`).join(', ')}`,
+      `Plaintext Findings Count: ${analysis.plaintextWarningsCount}`,
+      '',
+      '--- Security Findings (Unencrypted / Cleartext Transmissions) ---',
+      ...(analysis.findings && analysis.findings.length > 0
+        ? analysis.findings.map((f: any) => [
+            `[${f.type.toUpperCase()}] ${f.title}`,
+            f.packetId ? `Packet #${f.packetId}` : '',
+            `Description: ${f.description}`,
+            f.details ? `Extracted Evidence: ${f.details}` : '',
+            '----------------------------------------'
+          ].filter(Boolean).join('\n'))
+        : ['No unencrypted credentials or plain HTTP sessions detected.']),
+      '',
+      '--- Top Conversations ---',
+      ...(analysis.conversations || []).slice(0, 10).map((c: any) =>
+        `${c.endpointA} <-> ${c.endpointB} | Protocol: ${c.protocol} | Packets: ${c.packets} | ${(c.bytes / 1024).toFixed(1)} KB`
+      )
+    ].join('\n');
+  };
 
   // Handle user uploading their own .pcap or .pcapng file
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,6 +182,19 @@ export const PacketAnalyzer: React.FC = () => {
 
       {analysis && (
         <div className="space-y-6">
+          <div className="flex items-center justify-between pb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wider font-semibold text-slate-400 font-mono">
+                Capture Analysis: <span className="text-slate-200">{analysis.filename}</span>
+              </span>
+            </div>
+            <CopyButton
+              text={formatPcapReport}
+              label="Copy Packet Analysis"
+              copiedLabel="Analysis Copied!"
+            />
+          </div>
+
           {/* Top Statistics Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl">

@@ -1,13 +1,28 @@
 import React, { useState } from 'react';
 import { ShieldCheck, ShieldAlert, CheckCircle2, XCircle, AlertTriangle, Search, Loader2, Lock, Radio } from 'lucide-react';
 import { Explainer } from '../Explainer.tsx';
+import { CopyButton } from '../CopyButton.tsx';
 
 export const PortScanner: React.FC = () => {
-  const [host, setHost] = useState('scanme.nmap.org');
+  const [host, setHost] = useState('127.0.0.1');
   const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<any>(null);
+
+  const formatPortScanReport = () => {
+    if (!scanResult) return '';
+    return [
+      `# TCP Port Scan Report: ${scanResult.target} (${scanResult.targetIp})`,
+      `Scanned At: ${scanResult.scannedAt}`,
+      `Scan Metrics: Open=${scanResult.summary?.open}, Closed=${scanResult.summary?.closed}, Filtered=${scanResult.summary?.filtered}`,
+      '',
+      '--- Port State Breakdown ---',
+      ...(scanResult.ports || []).map((p: any) =>
+        `Port ${p.port}/TCP (${p.service}): [${p.state.toUpperCase()}] - ${p.risk}`
+      )
+    ].join('\n');
+  };
 
   const handleScan = async (testHost?: string) => {
     const target = testHost || host;
@@ -37,9 +52,10 @@ export const PortScanner: React.FC = () => {
   };
 
   const sampleTargets = [
-    { label: 'Authorized Test Host (scanme.nmap.org)', host: 'scanme.nmap.org' },
-    { label: 'Google Public DNS', host: 'dns.google' },
-    { label: 'Cloudflare', host: 'one.one.one.one' },
+    { label: 'Localhost', host: '127.0.0.1' },
+    { label: 'Host-Only Lab VM', host: '192.168.56.101' },
+    { label: 'Private Subnet Target', host: '10.0.0.5' },
+    { label: 'Public IP (Tests 403 Enforcement)', host: '8.8.8.8' },
   ];
 
   return (
@@ -58,12 +74,12 @@ export const PortScanner: React.FC = () => {
             />
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Test TCP connect accessibility against fixed standard service ports. Gated by explicit ownership verification.
+            Test TCP connect accessibility against fixed standard ports. Gated by explicit authorization and enforced at the network level to private/local targets only (127.0.0.1, 10.x, 172.16-31.x, 192.168.x).
           </p>
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs text-slate-400">Authorized targets:</span>
+          <span className="text-xs text-slate-400">Target presets:</span>
           {sampleTargets.map((s) => (
             <button
               key={s.host}
@@ -74,7 +90,7 @@ export const PortScanner: React.FC = () => {
               }}
               className="px-2.5 py-1 text-xs text-slate-300 bg-slate-900 hover:bg-slate-800 hover:text-white border border-slate-700/60 rounded-md transition-colors font-mono cursor-pointer"
             >
-              {s.host}
+              {s.label}
             </button>
           ))}
         </div>
@@ -176,6 +192,17 @@ export const PortScanner: React.FC = () => {
       {/* Results Table */}
       {scanResult && (
         <div className="space-y-4">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-xs uppercase tracking-wider font-semibold text-slate-400 font-mono">
+              Port Accessibility Findings
+            </span>
+            <CopyButton
+              text={formatPortScanReport}
+              label="Copy Scan Report"
+              copiedLabel="Report Copied!"
+            />
+          </div>
+
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-xl text-xs font-mono">

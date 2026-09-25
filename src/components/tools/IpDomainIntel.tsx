@@ -1,12 +1,34 @@
 import React, { useState } from 'react';
 import { Globe, Search, Server, MapPin, Database, Shield, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 import { Explainer } from '../Explainer.tsx';
+import { CopyButton } from '../CopyButton.tsx';
 
 export const IpDomainIntel: React.FC = () => {
   const [target, setTarget] = useState('cloudflare.com');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<any>(null);
+
+  const formatIntelReport = () => {
+    if (!data) return '';
+    return [
+      `# IP & Domain Intelligence: ${data.target}`,
+      `Query Type: ${data.isIp ? 'IP Address' : 'Domain Name'}`,
+      `Resolved IPs: ${(data.resolvedIps || []).join(', ') || 'None'}`,
+      `ISP / Provider: ${data.geoData?.isp || 'Unknown'}`,
+      `ASN: ${data.geoData?.as || 'Unknown'}`,
+      `Geolocation: ${[data.geoData?.city, data.geoData?.regionName, data.geoData?.country].filter(Boolean).join(', ') || 'Unknown'}`,
+      `Timezone: ${data.geoData?.timezone || 'Unknown'}`,
+      '',
+      '--- DNS Records ---',
+      ...(data.dnsRecords?.A ? [`A (IPv4): ${data.dnsRecords.A.join(', ')}`] : []),
+      ...(data.dnsRecords?.AAAA ? [`AAAA (IPv6): ${data.dnsRecords.AAAA.join(', ')}`] : []),
+      ...(data.dnsRecords?.MX ? [`MX (Mail): ${data.dnsRecords.MX.map((m: any) => `${m.exchange} (Priority: ${m.priority})`).join('; ')}`] : []),
+      ...(data.dnsRecords?.TXT ? [`TXT: ${data.dnsRecords.TXT.join(' | ')}`] : []),
+      ...(data.dnsRecords?.NS ? [`NS (Nameservers): ${data.dnsRecords.NS.join(', ')}`] : []),
+      ...(data.dnsRecords?.PTR ? [`PTR (Reverse DNS): ${data.dnsRecords.PTR.join(', ')}`] : []),
+    ].join('\n');
+  };
 
   const handleLookup = async (lookupTarget?: string) => {
     const query = lookupTarget || target;
@@ -108,6 +130,17 @@ export const IpDomainIntel: React.FC = () => {
       {/* Results grid */}
       {data && (
         <div className="space-y-6">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-xs uppercase tracking-wider font-semibold text-slate-400 font-mono">
+              Intelligence Findings
+            </span>
+            <CopyButton
+              text={formatIntelReport}
+              label="Copy Findings Report"
+              copiedLabel="Report Copied!"
+            />
+          </div>
+
           {/* Top metadata overview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl">

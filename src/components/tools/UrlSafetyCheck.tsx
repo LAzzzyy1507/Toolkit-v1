@@ -1,12 +1,35 @@
 import React, { useState } from 'react';
 import { ShieldCheck, ShieldAlert, AlertTriangle, Link2, Search, Loader2, CheckCircle2 } from 'lucide-react';
 import { Explainer } from '../Explainer.tsx';
+import { CopyButton } from '../CopyButton.tsx';
 
 export const UrlSafetyCheck: React.FC = () => {
   const [url, setUrl] = useState('https://secure-login.bank-update.xyz/verify-account');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
+
+  const formatUrlReport = () => {
+    if (!result) return '';
+    return [
+      `# URL Safety & Threat Inspection Report`,
+      `Target URL: ${result.url}`,
+      `Risk Verdict: ${result.verdict}`,
+      `Threat Score: ${result.riskScore}/100`,
+      `Hostname: ${result.host}`,
+      `Protocol: ${result.protocol}`,
+      `Path: ${result.pathname || '/'}`,
+      '',
+      '--- Triggered Threat Indicators ---',
+      ...(result.indicators && result.indicators.length > 0
+        ? result.indicators.map((ind: any) => `[${ind.risk.toUpperCase()}] ${ind.rule}: ${ind.description}`)
+        : ['No suspicious indicators detected (Clean lexical profile).']),
+      ...(result.safeBrowsingResult ? [
+        '',
+        `Google Safe Browsing Status: ${result.safeBrowsingResult.isFlagged ? 'FLAGGED AS THREAT' : 'Clean / Not Blacklisted'}`
+      ] : [])
+    ].join('\n');
+  };
 
   const handleCheck = async (testUrl?: string) => {
     const targetUrl = testUrl || url;
@@ -115,6 +138,17 @@ export const UrlSafetyCheck: React.FC = () => {
 
       {result && (
         <div className="space-y-6">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-xs uppercase tracking-wider font-semibold text-slate-400 font-mono">
+              Reputation & Threat Analysis
+            </span>
+            <CopyButton
+              text={formatUrlReport}
+              label="Copy Threat Report"
+              copiedLabel="Report Copied!"
+            />
+          </div>
+
           {/* Top Verdict Card */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-5 bg-slate-900/90 border border-slate-800 rounded-xl flex items-center gap-4">

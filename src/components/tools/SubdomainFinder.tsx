@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Network, Search, Filter, Shield, AlertCircle, ExternalLink, Loader2 } from 'lucide-react';
 import { Explainer } from '../Explainer.tsx';
+import { CopyButton } from '../CopyButton.tsx';
 
 export const SubdomainFinder: React.FC = () => {
   const [domain, setDomain] = useState('mozilla.org');
@@ -149,6 +150,12 @@ export const SubdomainFinder: React.FC = () => {
                 />
                 <span>Hide Wildcards</span>
               </label>
+
+              <CopyButton
+                text={() => `# Subdomains for ${domain} (${filteredSubdomains.length} records)\n` + filteredSubdomains.map(s => s.subdomain).join('\n')}
+                label="Copy List"
+                copiedLabel="List Copied!"
+              />
             </div>
           </div>
 

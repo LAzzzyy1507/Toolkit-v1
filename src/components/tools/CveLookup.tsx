@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Search, ShieldAlert, ExternalLink, Filter, Loader2, Info } from 'lucide-react';
 import { Explainer } from '../Explainer.tsx';
+import { CopyButton } from '../CopyButton.tsx';
 
 export const CveLookup: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -9,6 +10,23 @@ export const CveLookup: React.FC = () => {
   const [cves, setCves] = useState<any[]>([]);
   const [source, setSource] = useState<string>('');
   const [severityFilter, setSeverityFilter] = useState<string>('ALL');
+
+  const formatCveBatch = () => {
+    if (filteredCves.length === 0) return 'No CVEs found.';
+    return [
+      `# CVE Search Results (${filteredCves.length} vulnerabilities)`,
+      `Query: "${query || 'All Recommended'}" | Filter: ${severityFilter}`,
+      '',
+      ...filteredCves.map(c => [
+        `[${c.cveId}] CVSS: ${c.cvssScore} (${c.severity})`,
+        `Title: ${c.title || c.cveId}`,
+        `Weakness: ${c.weakness || 'N/A'} | Vector: ${c.vectorString || 'N/A'}`,
+        `Summary: ${c.description}`,
+        `NVD Link: https://nvd.nist.gov/vuln/detail/${c.cveId}`,
+        '--------------------------------------------------',
+      ].join('\n'))
+    ].join('\n');
+  };
 
   const fetchCves = async (searchQuery = '') => {
     setLoading(true);
@@ -165,8 +183,15 @@ export const CveLookup: React.FC = () => {
             <code className="text-cyan-300 font-mono">UI:N</code> (Zero User Interaction).
           </p>
         </div>
-        <div className="shrink-0 text-slate-400 font-mono text-[11px]">
-          Data Source: <span className="text-slate-200">{source || 'NVD & Threat Catalog'}</span>
+        <div className="shrink-0 flex items-center gap-3">
+          <span className="text-slate-400 font-mono text-[11px]">
+            Data Source: <span className="text-slate-200">{source || 'NVD & Threat Catalog'}</span>
+          </span>
+          <CopyButton
+            text={formatCveBatch}
+            label={`Copy Results (${filteredCves.length})`}
+            copiedLabel="Results Copied!"
+          />
         </div>
       </div>
 
@@ -224,15 +249,22 @@ export const CveLookup: React.FC = () => {
                     )}
                   </div>
 
-                  <a
-                    href={`https://nvd.nist.gov/vuln/detail/${cve.cveId}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
-                  >
-                    <span>View NIST NVD Record</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+                  <div className="flex items-center gap-2">
+                    <CopyButton
+                      text={() => `[${cve.cveId}] CVSS ${cve.cvssScore} (${cve.severity})\nTitle: ${cve.title || cve.cveId}\nWeakness: ${cve.weakness || 'N/A'}\nVector: ${cve.vectorString || 'N/A'}\nSummary: ${cve.description}\nhttps://nvd.nist.gov/vuln/detail/${cve.cveId}`}
+                      label="Copy CVE"
+                      copiedLabel="Copied!"
+                    />
+                    <a
+                      href={`https://nvd.nist.gov/vuln/detail/${cve.cveId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+                    >
+                      <span>NIST Record</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
                 </div>
               </div>
             );

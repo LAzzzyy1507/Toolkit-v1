@@ -28,6 +28,51 @@ app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 let cachedNews: any[] = [];
 let newsLastFetched = 0;
 
+// In-memory sliding-window rate limiter (10 requests per IP per 5 minutes)
+interface RateLimitRecord {
+  timestamps: number[];
+}
+const rateLimitMap = new Map<string, RateLimitRecord>();
+
+function createRateLimiter(maxRequests: number, windowMs: number) {
+  return (req: Request, res: Response, next: express.NextFunction) => {
+    const rawIp = req.headers['x-forwarded-for'];
+    const clientIp = ((Array.isArray(rawIp) ? rawIp[0] : (rawIp as string)?.split(',')[0]) || req.socket.remoteAddress || 'unknown').trim();
+    const now = Date.now();
+    const record = rateLimitMap.get(clientIp) || { timestamps: [] };
+
+    // Discard timestamps older than sliding window
+    record.timestamps = record.timestamps.filter((ts) => now - ts < windowMs);
+
+    if (record.timestamps.length >= maxRequests) {
+      const oldest = record.timestamps[0];
+      const retryAfterSeconds = Math.ceil((oldest + windowMs - now) / 1000);
+      res.setHeader('Retry-After', retryAfterSeconds);
+      return res.status(429).json({
+        error: `Rate limit exceeded: maximum ${maxRequests} requests per ${Math.round(windowMs / 60000)} minutes. Please wait ${retryAfterSeconds}s before retrying.`,
+      });
+    }
+
+    record.timestamps.push(now);
+    rateLimitMap.set(clientIp, record);
+    next();
+  };
+}
+
+const heavyEndpointLimiter = createRateLimiter(10, 5 * 60 * 1000);
+
+// Validate whether an IP address belongs to local or RFC 1918 private space
+function isPrivateOrLocalIp(ip: string): boolean {
+  if (ip === '127.0.0.1' || ip === '::1' || ip === 'localhost') return true;
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(isNaN)) return false;
+  const [a, b] = parts;
+  if (a === 10) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  return false;
+}
+
 // Clean host helper
 function sanitizeHost(input: string): string {
   let cleaned = input.trim();
@@ -713,7 +758,7 @@ app.post('/api/url-safety', async (req: Request, res: Response) => {
 // -----------------------------------------------------------------------------
 // 6. PACKET CAPTURE ANALYZER (Server-Side In-Memory Processing)
 // -----------------------------------------------------------------------------
-app.post('/api/pcap/analyze', async (req: Request, res: Response) => {
+app.post('/api/pcap/analyze', heavyEndpointLimiter, async (req: Request, res: Response) => {
   try {
     const { fileBase64, filename, demoType } = req.body;
 
@@ -790,7 +835,7 @@ function checkPort(host: string, port: number, timeoutMs = 850): Promise<'open' 
   });
 }
 
-app.post('/api/port-scan', async (req: Request, res: Response) => {
+app.post('/api/port-scan', heavyEndpointLimiter, async (req: Request, res: Response) => {
   const { host: rawHost, authorized } = req.body;
 
   if (!authorized) {
@@ -809,6 +854,13 @@ app.post('/api/port-scan', async (req: Request, res: Response) => {
   try {
     const resolved = await dns.promises.lookup(host);
     const targetIp = resolved.address;
+
+    // Enforce network-level restriction: private / local targets only
+    if (!isPrivateOrLocalIp(targetIp)) {
+      return res.status(403).json({
+        error: 'Port scanning is restricted to private/local network targets (your own lab VM), not public hosts.',
+      });
+    }
 
     // Scan fixed common ports with bounded concurrency (3 at a time)
     const results: any[] = [];
